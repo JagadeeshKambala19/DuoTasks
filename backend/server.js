@@ -8,19 +8,27 @@ const { pool, pingDatabase } = require("./config/db");
 
 const app = express();
 
-app.use(cors());
+// ✅ Apply CORS once (correct place)
+app.use(cors({
+  origin: "http://localhost:3000"
+}));
+
+// ✅ Middleware
 app.use(express.json());
 
+// ✅ Routes
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Task Management System API" });
 });
 
 app.use("/tasks", tasksRoutes);
 
+// Utility
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Wait for DB
 async function waitForDatabase({ retries = 30, delayMs = 2000 } = {}) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -31,14 +39,13 @@ async function waitForDatabase({ retries = 30, delayMs = 2000 } = {}) {
       console.error(
         `Database connection attempt ${attempt}/${retries} failed: ${error.message}`
       );
-      if (attempt === retries) {
-        throw error;
-      }
+      if (attempt === retries) throw error;
       await sleep(delayMs);
     }
   }
 }
 
+// Ensure schema
 async function ensureSchema() {
   await pool.query(
     "CREATE TABLE IF NOT EXISTS tasks (" +
@@ -51,6 +58,7 @@ async function ensureSchema() {
   );
 }
 
+// Start server
 async function start() {
   const port = process.env.PORT || 5001;
 
@@ -59,7 +67,7 @@ async function start() {
     await ensureSchema();
     console.log("Database schema is ready.");
 
-    app.listen(port, () => {
+    app.listen(port, "0.0.0.0", () => {
       console.log(`Backend server running on port ${port}.`);
     });
   } catch (error) {
@@ -69,4 +77,3 @@ async function start() {
 }
 
 start();
-
